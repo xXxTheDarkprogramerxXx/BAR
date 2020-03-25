@@ -9,7 +9,11 @@ Zer0xFF (for some improvement in code)
 
 PixelButts (for testing)
 
+AlAzif (for testing as well)
+
 idc (for the hasher key correct size)
+
+Kakaroto (for the chunk parsing idea)
 
 and to anonymous (for everything you did and have done in the past)
 
