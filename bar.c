@@ -100,6 +100,8 @@ void hexDump(const void *data, size_t size) {
   printf("\n");
 }
 
+#define MAX_CHUNK_SIZE 0x10000
+
 FILE *fl = NULL;
 //flatz's algo
 uint8_t * cbc_dec(const unsigned char *key, unsigned char* iv, unsigned char* data, uint64_t data_size){
@@ -193,18 +195,28 @@ int main(int argc, char** argv){
 			hexDump(sig->signature,0x20);
 		}*/
 		
-		
+		uint64_t j=seg->data_size_without_padding;
 		//CIPHER
-		uint8_t* buf3 = (uint8_t*) malloc(seg->data_size_without_padding);
-		fread(buf3, seg->data_size_without_padding, 1,fl);
-		uint8_t* buf6 = cbc_dec(sbl_bar_cipher_key,seg->cipher_seed,buf3,seg->data_size_without_padding);
-		free(buf3);
-		
-		//printf("writing data offset %08X, data size without padding %08X\n",seg->data_offset,seg->data_size_without_padding);
-		fwrite(buf6, seg->data_size_without_padding, 1,blob);
-		//printf("write data offset %08X, data size without padding %08X done\n",seg->data_offset,seg->data_size_without_padding);
-		
-		free(buf6);
+		while(j >= MAX_CHUNK_SIZE){
+			uint8_t* buf3 = (uint8_t*) malloc(MAX_CHUNK_SIZE);
+			fread(buf3, MAX_CHUNK_SIZE, 1,fl);
+			uint8_t* buf6 = cbc_dec(sbl_bar_cipher_key,seg->cipher_seed,buf3,MAX_CHUNK_SIZE);
+			//printf("writing data offset %08X, data size without padding %08X\n",seg->data_offset,seg->data_size_without_padding);
+			fwrite(buf6, MAX_CHUNK_SIZE, 1,blob);
+			//printf("write data offset %08X, data size without padding %08X done\n",seg->data_offset,seg->data_size_without_padding);
+			free(buf3);
+			free(buf6);
+			j-=MAX_CHUNK_SIZE;
+		}if(j<MAX_CHUNK_SIZE){
+			uint8_t* buf3 = (uint8_t*) malloc(j);
+			fread(buf3, j, 1,fl);
+			uint8_t* buf6 = cbc_dec(sbl_bar_cipher_key,seg->cipher_seed,buf3,j);
+			//printf("writing data offset %08X, data size without padding %08X\n",seg->data_offset,seg->data_size_without_padding);
+			fwrite(buf6, j, 1,blob);
+			//printf("write data offset %08X, data size without padding %08X done\n",seg->data_offset,seg->data_size_without_padding);
+			free(buf3);
+			free(buf6);
+		}
 		fclose(blob);
 		free(name);
 		
