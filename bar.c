@@ -100,6 +100,56 @@ void hexDump(const void *data, size_t size) {
   printf("\n");
 }
 
+FILE *fl = NULL;
+//flatz's algo
+uint8_t * cbc_dec(const unsigned char *key, unsigned char* iv, unsigned char* data, uint64_t data_size){
+	
+	uint8_t* result = NULL;
+	//printf("data size: 0x%llx\n",data_size);
+	if(data_size == 0){
+		return result;
+	}
+	result = (uint8_t*) malloc(data_size);
+	uint64_t num_data_left = data_size;
+	
+	uint64_t block_size = 16;
+	uint64_t offset = 0;
+	unsigned char *input = (unsigned char*) malloc (block_size);
+	unsigned char *output = (unsigned char*) malloc (block_size);
+	while(num_data_left >= block_size){
+		//AES_ecb_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key, const int enc)
+		
+		memcpy(input,data+offset,block_size);
+		
+		AES_KEY ctx;
+		AES_set_decrypt_key(key,0x80,&ctx);
+		AES_ecb_encrypt(input,output,&ctx,AES_DECRYPT);
+		unsigned int i = 0;
+		for(i=0;i<block_size;i++){
+			output[i]=output[i]^iv[i];
+		}
+		memcpy(result+offset,output,block_size);
+		memcpy(iv,input,block_size);
+		num_data_left -= block_size;
+		offset += block_size;
+	}
+	
+	if (num_data_left > 0 & num_data_left < block_size){
+			//printf("data left : 0x%08x\n",num_data_left);
+			memcpy(input,data+offset - block_size,block_size);
+			AES_KEY ctx;
+			AES_set_encrypt_key(key,0x80,&ctx);
+			AES_ecb_encrypt(input,output,&ctx,AES_ENCRYPT);
+			unsigned int i = 0;
+			for(i=0;i<num_data_left;i++){
+				result[offset+i]=data[offset+i]^output[i];
+			}
+		}
+	
+    
+	return result;
+}
+
 int main(int argc, char** argv){
 	FILE *fp=fopen("archive.dat","rb");
 	fseeko(fp,0,SEEK_SET);
@@ -109,7 +159,7 @@ int main(int argc, char** argv){
 	printf("Number of Entries:%lx\n",hdr->num_segments);
 	uint64_t i=0;
 	
-	FILE *fl = NULL;
+	
 	for(i=0;i<hdr->num_segments;i++){
 		uint8_t* name = (uint8_t*) malloc(10 + 3);
 		sprintf(name, "blob%lx.bin", i);
@@ -122,8 +172,10 @@ int main(int argc, char** argv){
 		fl = getArchive(seg->data_offset);
 		fseeko(fl,seg->data_offset % MAX_SEG_SIZE,SEEK_SET);
 		
-		uint8_t *buf3 = (uint8_t*) malloc (seg->data_size_without_padding);
-		fread(buf3, seg->data_size_without_padding, 1,fl);
+		//printf("allocating data offset 0x%lx, data size without padding 0x%lx\n",seg->data_offset,seg->data_size_without_padding);
+		
+		
+		
 		
 		//HASHER
 		//skipping this
@@ -143,13 +195,16 @@ int main(int argc, char** argv){
 		
 		
 		//CIPHER
-		AES_KEY ctx;
-		AES_set_decrypt_key(sbl_bar_cipher_key,0x80,&ctx);
-		AES_cbc_encrypt(buf3,buf3,seg->data_size_without_padding,&ctx,seg->cipher_seed,AES_DECRYPT);
-		//printf("writing data offset %08X, data size without padding %08X\n",seg->data_offset,seg->data_size_without_padding);
-		fwrite(buf3, seg->data_size_without_padding, 1,blob);
-		//printf("write data offset %08X, data size without padding %08X done\n",seg->data_offset,seg->data_size_without_padding);
+		uint8_t* buf3 = (uint8_t*) malloc(seg->data_size_without_padding);
+		fread(buf3, seg->data_size_without_padding, 1,fl);
+		uint8_t* buf6 = cbc_dec(sbl_bar_cipher_key,seg->cipher_seed,buf3,seg->data_size_without_padding);
 		free(buf3);
+		
+		//printf("writing data offset %08X, data size without padding %08X\n",seg->data_offset,seg->data_size_without_padding);
+		fwrite(buf6, seg->data_size_without_padding, 1,blob);
+		//printf("write data offset %08X, data size without padding %08X done\n",seg->data_offset,seg->data_size_without_padding);
+		
+		free(buf6);
 		fclose(blob);
 		free(name);
 		
