@@ -15,6 +15,8 @@ idc (for the hasher key correct size)
 
 Kakaroto (for the chunk parsing idea)
 
+LM (for some ideas and code improvements)
+
 and to anonymous (for everything you did and have done in the past)
 
 ### Usage
