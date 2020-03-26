@@ -23,4 +23,6 @@ and to anonymous (for everything you did and have done in the past)
 
 ### Usage
 
-compile it and simply place it near the archives and run it. it'll produce some blobs. support for bigger blobs is in process...
+compile it and simply place it near the archives and run it. it'll produce some blobs. 
+
+should now support bigger blobs
