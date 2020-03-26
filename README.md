@@ -11,6 +11,8 @@ PixelButts (for testing)
 
 AlAzif (for testing as well)
 
+SocraticBliss (for testing as well)
+
 idc (for the hasher key correct size)
 
 Kakaroto (for the chunk parsing idea)
