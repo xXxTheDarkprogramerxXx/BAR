@@ -152,6 +152,56 @@ uint8_t * cbc_dec(const unsigned char *key, unsigned char* iv, unsigned char* da
 	return result;
 }
 
+uint8_t * cbc_enc(const unsigned char *key, unsigned char* iv, unsigned char* data, uint64_t data_size){
+	
+	uint8_t* result = NULL;
+	//printf("data size: 0x%llx\n",data_size);
+	if(data_size == 0){
+		return result;
+	}
+	result = (uint8_t*) malloc(data_size);
+	uint64_t num_data_left = data_size;
+	
+	uint64_t block_size = 16;
+	uint64_t offset = 0;
+	unsigned char *input = (unsigned char*) malloc (block_size);
+	unsigned char *output = (unsigned char*) malloc (block_size);
+	while(num_data_left >= block_size){
+		//AES_ecb_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key, const int enc)
+		unsigned int i = 0;
+		for(i=0;i<block_size;i++){
+			input[i]=data[offset+i]^iv[i];
+		}
+
+
+		AES_KEY ctx;
+		AES_set_encrypt_key(key,0x80,&ctx);
+		AES_ecb_encrypt(input,output,&ctx,AES_ENCRYPT);
+
+		memcpy(result+offset,output,block_size);
+		memcpy(iv,output,block_size);
+		
+		num_data_left -= block_size;
+		offset += block_size;
+
+	}
+	
+	if (num_data_left > 0 & num_data_left < block_size){
+			//printf("data left : 0x%08x\n",num_data_left);
+			memcpy(input,result+offset - block_size,block_size);
+			AES_KEY ctx;
+			AES_set_encrypt_key(key,0x80,&ctx);
+			AES_ecb_encrypt(input,output,&ctx,AES_ENCRYPT);
+			unsigned int i = 0;
+			for(i=0;i<num_data_left;i++){
+				result[offset+i]=data[offset+i]^output[i];
+			}
+		}
+	
+    
+	return result;
+}
+
 int main(int argc, char** argv){
 	FILE *fp=fopen("archive.dat","rb");
 	fseeko(fp,0,SEEK_SET);
